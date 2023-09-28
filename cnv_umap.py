@@ -19,9 +19,10 @@ import plotly.express as px
 
 
 AMPLITUDE_THRESHOLD = 0.06
+DATA_PATH = "entities_transformed.csv"
 
 
-df = pd.read_csv("/home/alpha/programs/python_files/datasets/cnv_and_mut/entities_transformed.csv")
+df = pd.read_csv(DATA_PATH)
 
 # basic filtering. Rename Unnamded 0 with ID. Dropp chromosomes Y and X
 # df = df.dropna(axis=1)

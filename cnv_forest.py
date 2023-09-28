@@ -9,9 +9,9 @@ from sklearn.metrics import accuracy_score, confusion_matrix, precision_score, r
 from sklearn.model_selection import RandomizedSearchCV, train_test_split
 from scipy.stats import randint
 
+DATA_PATH = "entities_transformed.csv"
 
-
-df = pd.read_csv("/home/alpha/programs/python_files/datasets/cnv_and_mut/entities_transformed.csv")
+df = pd.read_csv(DATA_PATH)
 
 print(df.head())
 

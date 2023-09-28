@@ -6,7 +6,7 @@ import pywt
 
 
 # Fins all cnv files based on entity name
-GLOB_PATH = "/home/alpha/programs/python_files/datasets/cnv_and_mut/"
+GLOB_PATH = ""
 ENTITY_NAME = ["gbm","k27","mng","oligo","pxa","astroLow","astroHigh","pa"]
 FILE_TYPE = input("which file type to use? wes/igv \n")
 
