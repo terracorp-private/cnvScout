@@ -12,8 +12,11 @@ def feature_selector(input_file):
     '''
 
 
+    # select feature "sample" or "diagnosis" and drop unneeded.
     df = pd.read_csv(input_file)
-    df = df.set_index("sample")
+    df = df.set_index("Diagnose")
+    df = df.drop(columns=["sample"])
+
 
     # TODO other methods to select features. For example quartiles.
 
@@ -21,7 +24,7 @@ def feature_selector(input_file):
     probes_std = df.std().sort_values(ascending=False)
 
     # TODO make a not-guesstimating method for threshold of feature selection. I.e. first derivative.
-    probes_std_selected = probes_std[probes_std < 2.1]
+    probes_std_selected = probes_std[probes_std < 0.1]
     probes_names_to_drop = list(probes_std_selected.index)
 
     print(probes_names_to_drop)
@@ -31,7 +34,7 @@ def feature_selector(input_file):
     cropped_frame = df.drop(columns=probes_names_to_drop)
     print(cropped_frame)
 
-    return cropped_frame
+    return cropped_frame, probes_std
 
 
 def harry_plotter(df):
@@ -46,5 +49,5 @@ def harry_plotter(df):
 
 input_file, output_file = sys.argv[1:]
 
-feature_selector(input_file).to_csv(output_file)
-# harry_plotter(data)
+feature_selector(input_file)[0].to_csv(output_file)
+# harry_plotter(feature_selector(input_file)[1])

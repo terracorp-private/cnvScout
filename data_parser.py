@@ -11,15 +11,31 @@ def datamatix_constructor(path_to_cnn, output_file):
     output needs an argv argument. Use /tmp/tmp.csv if you don't need one
     '''
 
+    # TODO Duplicated samples management. Actuall solution is really quick and dirty.
+
+    cases_df = pd.read_excel("../../../Documents/datasets/cnv_ngs/features_frame_annon.xlsx", usecols=["Barcode", "ID", "Diagnose"])
+    cases_df["sample"] = cases_df["Barcode"] + "_" + cases_df["ID"]
+
+    if cases_df["sample"].duplicated().sum().sum() != 0:
+        cases_df = cases_df.drop_duplicates(subset=["sample"])
+        print("Duplicates were dropped", cases_df[cases_df["sample"].duplicated() == True], sep="\n")
+
+    selected_cases = cases_df["sample"].to_list()
+
+
+    # empty dataframe for final merged data
     data = pd.DataFrame()
 
     for file in glob.glob(path_to_cnn + "*.cnn"):
-        sample = re.findall(r"\d.*001", file)
+        sample = re.findall(r"[0-9]{4}_.*_[0-9]{2}_", file)
         sample = "".join(sample)
 
-        df = pd.read_csv(file, sep="\t", usecols=["chromosome","start","log2"])
-        df["sample"] = sample
-        data = pd.concat([df,data])
+        if sample in selected_cases:
+            print(sample)
+
+            df = pd.read_csv(file, sep="\t", usecols=["chromosome","start","log2"])
+            df["sample"] = sample
+            data = pd.concat([df,data])
 
     # print(data.isnull().any().any())
     data["identifier"] = data["chromosome"].astype(str) + "_" + data["start"].astype(str)
@@ -34,6 +50,8 @@ def datamatix_constructor(path_to_cnn, output_file):
     # smpl_ser = data["sample"].value_counts()
 
     data_long = data.pivot(index="sample", columns="identifier", values="log2")
+    data_long = pd.merge(data_long, cases_df, on="sample", how="inner")
+    data_long = data_long.drop(columns=["ID", "Barcode"])
 
     # TODO try nans
     # print(data_long.isnull().any().any())

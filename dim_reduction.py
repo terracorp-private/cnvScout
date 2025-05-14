@@ -13,7 +13,6 @@ import plotly.express as px
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 import umap
-# import umap.plot
 
 
 def data_integrity():
@@ -32,12 +31,12 @@ def data_integrity():
     if duplicated_values != 0:
         raise Exception(f"Data contatins duplicates {duplicated_values}")
 
-    print(data["sample"], data.iloc[:,1:-1])
+    print(data["Diagnose"], data.iloc[:,1:-1])
 
-    return data["sample"], data.iloc[:,1:-1]
+    return data["Diagnose"], data.iloc[:,1:-1]
 
 
-def PCA_reduction(features, data, components_number, first_component, second_component):
+def PCA_reduction(features, data, components_number, first_component, second_component, plot):
 
     # TODO work on PCA_explained_variance
 
@@ -46,18 +45,20 @@ def PCA_reduction(features, data, components_number, first_component, second_com
 
     pca = PCA(n_components=components_number)
     X_pca = pca.fit_transform(X)
-    principal_df = pd.DataFrame(data = X_pca, columns = ['PC1', 'PC2', 'PC3'])
+    principal_df = pd.DataFrame(data = X_pca)
 
-    # Scatterplot
-    # plt.scatter(principal_df.iloc[:,0], principal_df.iloc[:,1], s=20)
-    plt.scatter(principal_df[first_component], principal_df[second_component], s=20)
+    if plot == True:
+        # Scatterplot
+        # plt.scatter(principal_df.iloc[:,0], principal_df.iloc[:,1], s=20)
+        plt.scatter(principal_df[first_component], principal_df[second_component], s=20)
 
-    # Aesthetics
-    plt.title('PCA plot in 2D')
-    plt.xlabel(first_component)
-    plt.ylabel(second_component)
-    plt.show()
+        # Aesthetics
+        plt.title('PCA plot in 2D')
+        plt.xlabel(first_component)
+        plt.ylabel(second_component)
+        plt.show()
 
+    return principal_df
 
 def UMAP_reduction(data):
 
@@ -66,29 +67,27 @@ def UMAP_reduction(data):
     X = pd.DataFrame(std_scaler.fit_transform(data), columns=data.columns)
 
     # UMAP
-    u = umap.UMAP(n_neighbors=4)
+    u = umap.UMAP(n_neighbors=5, random_state=42)
     X_fit = u.fit(X)
     X_umap = u.transform(X)
 
     # Convert to data frame
     umap_df = pd.DataFrame(data = X_umap, columns = ['umap comp. 1', 'umap comp. 2'])
-
-    # Shape and preview
-    print(umap_df.shape, umap_df.head(), sep="\n")
+    x = umap_df.iloc[:,0]
+    y = umap_df.iloc[:,1]
 
     # Scatterplot
-    plt.figure(figsize=(8,6))
-    plt.scatter(umap_df.iloc[:,0], umap_df.iloc[:,1], cmap="brg", s=40)
+    fig = px.scatter(
+        umap_df, x=x, y=y,
+        color=features
+    )
+    fig.show()
 
-    # Aesthetics
-    plt.title('UMAP plot in 2D')
-    plt.xlabel('umap component 1')
-    plt.ylabel('umap component 2')
-    plt.show()
 
 
 features = data_integrity()[0]
 data = data_integrity()[1]
 
 # PCA_reduction(features, data, 3, "PC1", "PC2")
-UMAP_reduction(data)
+pca_data = PCA_reduction(features, data, 9, "PC1", "PC2", plot=False)
+UMAP_reduction(pca_data)
