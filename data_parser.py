@@ -36,7 +36,7 @@ def sample_selector(DATA_DIR):
     return cases_df
 
 
-def datamatix_constructor(path_to_cnn, output_file, samples_df):
+def datamatix_constructor(path_to_cnn, samples_df):
     '''The function iterates through cnn files and merges them to one data_matrix,
     output needs an argv argument. Use /tmp/tmp.csv if you don't need one
     '''
@@ -71,14 +71,18 @@ def datamatix_constructor(path_to_cnn, output_file, samples_df):
     data_long = pd.merge(data_long, samples_df, on="sample", how="inner")
     data_long = data_long.drop(columns=["ID", "Barcode"])
 
-    # TODO make state of the art output file
-    if output_file != "":
-        data_long.to_csv(output_file)
-        print(data_long)
-    else:
-        print("No output")
+    return data_long
 
+def final_matrix_merger(antitarget, target, DATA_DIR):
+    '''This function takes antitarget_cnv and target_cnv data
+    and merges them.
+    '''
+
+    final_df = pd.merge(antitarget, target, on="sample", how="inner")
+    final_df.to_csv(DATA_DIR+"raw_datamatrix.csv")
 
 
 samples_df = sample_selector(DATA_DIR)
-datamatix_constructor(DATA_DIR+"antitarget_2025/",DATA_DIR+"raw_datamatrix.csv", samples_df)
+antitarget = datamatix_constructor(DATA_DIR+"antitarget_2025/", samples_df)
+target = datamatix_constructor(DATA_DIR+"target_2025/", samples_df)
+final_matrix_merger(antitarget, target, DATA_DIR)
