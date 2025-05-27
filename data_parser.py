@@ -9,11 +9,19 @@ import pandas as pd
 DATA_DIR = sys.argv[1]
 
 
-def sample_selector(DATA_DIR):
-    '''Read sample sheet and pick sample names, sex, age and
-    diagnosis. Drop all samples with low read count.'''
+def na_finder(data):
+
+    columns_with_na = data.isnull().any()
+    columns_with_na = columns_with_na[columns_with_na].index.tolist()
+    print(f"Before merging target with antitarget {columns_with_na}\n")
+
+
+def sample_selector(DATA_DIR, min_reads):
+    """Read sample sheet and pick sample names, sex, age and
+    diagnosis. Drop all samples with low read count."""
 
     annotation_file = DATA_DIR + "features_frame_annon.xlsx"
+
 
     if annotation_file not in glob.glob(DATA_DIR+"*"):
         raise Exception("ERROR! Annotation file either not found or has wrong name")
@@ -24,7 +32,7 @@ def sample_selector(DATA_DIR):
         raise Exception(f"ERROR! Annotation file is empty")
 
     # Set the lowes tolerated read count. Default 200 reads.
-    cases_df = cases_df[cases_df["Mean Cov"] >= 200]
+    cases_df = cases_df[cases_df["Mean Cov"] >= min_reads]
 
     # Construct a distinct identifier. Since same samples could be
     # found accross multiple libraries.
@@ -32,6 +40,8 @@ def sample_selector(DATA_DIR):
 
     if cases_df["sample"].duplicated().sum().sum() != 0:
         cases_df = cases_df.drop_duplicates(subset=["sample"])
+
+    cases_df = cases_df.drop(columns=["Barcode","ID","Mean Cov"])
 
     return cases_df
 
@@ -55,34 +65,42 @@ def datamatix_constructor(path_to_cnn, samples_df):
         sample = "".join(sample)
 
         if sample in selected_cases:
-            print(sample)
+            df = pd.read_csv(file,
+                             sep="\t",
+                             usecols=["chromosome", "start", "log2"],
+                             ).tail(20)
 
-            df = pd.read_csv(file, sep="\t", usecols=["chromosome","start","log2"])
             df["sample"] = sample
-            data = pd.concat([df,data])
+            df["probe"] = df["chromosome"].astype(str) + "_" + df["start"].astype(str)
+            unique_probes = df["probe"].unique()
+            data = pd.concat([df, data])
+            # print(data)
 
     # make identifier chrom_genomic_position
-    data["identifier"] = data["chromosome"].astype(str) + "_" + data["start"].astype(str)
     data = data[(data["chromosome"] != "chrY") & (data["chromosome"] != "chrX")]
-    data = data.drop(["chromosome","start"],axis=1)
+    data = data.drop(["chromosome", "start"], axis=1)
+    data = data[data["probe"].isin(unique_probes)]
 
     # generate Pivot table merged on sample
-    data_long = data.pivot(index="sample", columns="identifier", values="log2")
+    data_long = data.pivot(index="sample", columns="probe", values="log2")
+    na_finder(data_long)
     data_long = pd.merge(data_long, samples_df, on="sample", how="inner")
-    data_long = data_long.drop(columns=["ID", "Barcode"])
 
     return data_long
 
+
 def final_matrix_merger(antitarget, target, DATA_DIR):
-    '''This function takes antitarget_cnv and target_cnv data
+
+    """This function takes antitarget_cnv and target_cnv data,
     and merges them.
-    '''
+    """
 
-    final_df = pd.merge(antitarget, target, on="sample", how="inner")
-    final_df.to_csv(DATA_DIR+"raw_datamatrix.csv")
+    final_df = pd.merge(antitarget, target, on=["sample", "Diagnose"], how="outer")
+    # final_df = final_df.dropna(axis=1)
+    final_df.to_csv(DATA_DIR+"raw_datamatrix.csv", index=False)
 
 
-samples_df = sample_selector(DATA_DIR)
-antitarget = datamatix_constructor(DATA_DIR+"antitarget_2025/", samples_df)
-target = datamatix_constructor(DATA_DIR+"target_2025/", samples_df)
+samples_df = sample_selector(DATA_DIR, 200)
+antitarget = datamatix_constructor(DATA_DIR+"antitarget/", samples_df)
+target = datamatix_constructor(DATA_DIR+"target/", samples_df)
 final_matrix_merger(antitarget, target, DATA_DIR)
