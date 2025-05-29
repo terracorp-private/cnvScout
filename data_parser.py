@@ -13,7 +13,8 @@ def na_finder(data):
 
     columns_with_na = data.isnull().any()
     columns_with_na = columns_with_na[columns_with_na].index.tolist()
-    print(f"Before merging target with antitarget {columns_with_na}\n")
+    if len(columns_with_na) != 0:
+        print(f"Columns with NA \n {columns_with_na}\n")
 
 
 def sample_selector(DATA_DIR, min_reads):
@@ -63,28 +64,30 @@ def datamatix_constructor(path_to_cnn, samples_df):
     for file in glob.glob(path_to_cnn + "*.cnn"):
         sample = re.findall(r"[0-9]{4}_.*_[0-9]{2}_", file)
         sample = "".join(sample)
+        # print(sample)
 
         if sample in selected_cases:
             df = pd.read_csv(file,
                              sep="\t",
                              usecols=["chromosome", "start", "log2"],
-                             ).tail(20)
+                             )
+            print(df.shape)
+            if (df.shape[0] == 19062 or df.shape[0] == 789):
+                df["sample"] = sample
+                df["probe"] = df["chromosome"].astype(str) + "_" + df["start"].astype(str)
+                print(df.shape[0], sample, df.columns, sep="\t")
 
-            df["sample"] = sample
-            df["probe"] = df["chromosome"].astype(str) + "_" + df["start"].astype(str)
-            unique_probes = df["probe"].unique()
-            data = pd.concat([df, data])
-            # print(data)
+                data = pd.concat([df, data])
 
+    # print(data)
     # make identifier chrom_genomic_position
     data = data[(data["chromosome"] != "chrY") & (data["chromosome"] != "chrX")]
     data = data.drop(["chromosome", "start"], axis=1)
-    data = data[data["probe"].isin(unique_probes)]
 
     # generate Pivot table merged on sample
     data_long = data.pivot(index="sample", columns="probe", values="log2")
-    na_finder(data_long)
     data_long = pd.merge(data_long, samples_df, on="sample", how="inner")
+    na_finder(data_long)
 
     return data_long
 
@@ -95,7 +98,7 @@ def final_matrix_merger(antitarget, target, DATA_DIR):
     and merges them.
     """
 
-    final_df = pd.merge(antitarget, target, on=["sample", "Diagnose"], how="outer")
+    final_df = pd.merge(antitarget, target, on=["sample", "Diagnose"], how="inner")
     # final_df = final_df.dropna(axis=1)
     final_df.to_csv(DATA_DIR+"raw_datamatrix.csv", index=False)
 
