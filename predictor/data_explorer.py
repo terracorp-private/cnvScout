@@ -10,16 +10,16 @@ import seaborn as sns
 import plotly.express as px
 
 # Sklearn & UMAP
-from sklearn.preprocessing import StandardScaler
+# from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 from umap import UMAP
 
+DATA_PATH = sys.argv[1]
 
-def data_integrity():
+
+def data_integrity(DATA_PATH):
     """Check for missing or duplicated data."""
-    path_to_data = sys.argv[1]
-    data = pd.read_csv(path_to_data)
-
+    data = pd.read_csv(DATA_PATH + "raw_datamatrix.csv")
     missing_values_sum = data.isna().sum().sum()
     missing_values = data.isna().sum()
     duplicated_values = data.duplicated().sum()
@@ -63,12 +63,21 @@ def var_filter(features, normalization_method, plot):
         return normalized_features
 
 
-def multicollinearity_cleaner(data, features):
-    """Identify and remove multicollinearity."""
-    sns.heatmap(data.corr(method='spearman'))
-    plt.show()
-    print(data.corr())
+def multicollinearity_cleaner(data, build_new, corr_threshold):
+    """Remove multicollinearity. Build and save correlation matix if does't exist."""
+    if build_new is True:
+        corr_df = data.corr(method='spearman').to_csv(DATA_PATH + "correlation_matrix.csv", index=False)
+    else:
+        corr_df = pd.read_csv(DATA_PATH + "correlation_matrix.csv")
+        cor_cols = set()
 
+        for i in range(len(corr_df.columns)):
+            for j in range(i):
+                if abs(corr_df.iloc[i, j]) > corr_threshold:
+                    cols = corr_df.columns[i]
+                    cor_cols.add(cols)
+
+        print(cor_cols)
 
 def PCA_reduction(features,
                   data,
@@ -118,12 +127,13 @@ def UMAP_reduction(targets, X, neighbours):
     fig.show()
 
 
-targets = data_integrity()[0]
-data = data_integrity()[1]
+targets = data_integrity(DATA_PATH)[0]
+data = data_integrity(DATA_PATH)[1]
+# cols_to_drop = pd.read_csv(DATA_PATH + "cor_cols_final.txt").columns.tolist()
 
 normalized_features = var_filter(data, "std", False)
+multicollinearity_cleaner(normalized_features, False, 0.95)
 # data_analyzer(data, targets)
-
-# for i in range(3, 16, 1):
-pca_data = PCA_reduction(targets, normalized_features, 11, "PC1", "PC2", plot=False)
-UMAP_reduction(targets, pca_data, neighbours=9)
+# normalized_features = normalized_features.drop(labels=cols_to_drop, axis=1)
+# pca_data = PCA_reduction(targets, normalized_features, 11, "PC1", "PC2", plot=False)
+# UMAP_reduction(targets, pca_data, neighbours=9)
