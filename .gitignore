@@ -1,0 +1,13 @@
+.DS_Store
+.idea
+*.log
+*.csv
+*.xlsx
+*.txt
+tmp/
+data/
+
+*.py[cod]
+*.egg
+build
+htmlcov
